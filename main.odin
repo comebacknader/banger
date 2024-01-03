@@ -57,6 +57,7 @@ main :: proc() {
     }
 
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+    gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*size_of(vertices[0]), raw_data(indices), gl.STATIC_DRAW)
 }
 
 sprite_vertex_source := `#version 330 core
