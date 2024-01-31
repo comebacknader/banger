@@ -32,55 +32,117 @@ main :: proc() {
     uniforms := gl.get_uniforms_from_program(program)
     defer delete(uniforms)
 
-    vao: u32
-    gl.GenVertexArrays(1, &vao); defer gl.DeleteVertexArrays(1, &vao)
-
-    vbo, ebo: u32
-    gl.GenBuffers(1, &vbo); defer gl.DeleteBuffers(1, &vbo)
-    gl.GenBuffers(1, &ebo); defer gl.DeleteBuffers(1, &ebo)
-
     Vertex :: struct {
         pos: glm.vec3,
-        col: glm.vec4
     }
 
     vertices := []Vertex{
-        {{-0.5, +0.5, 0}, {1.0, 0.0, 0.0, 0.75}},
-        {{-0.5, -0.5, 0}, {1.0, 1.0, 0.0, 0.75}},
-        {{+0.5, -0.5, 0}, {0.0, 1.0, 0.0, 0.75}},
-        {{+0.5, +0.5, 0}, {0.0, 0.0, 1.0, 0.75}},
+        {{1.0, 1.0, 0.0}},
+        {{1.0, -1.0, 0.0}},
+        {{-1.0, -1.0, 0.0}},
+        {{-1.0, 1.0, 0.0}},
     }
 
     indices := []u16 {
-        0, 1, 2,
-        2, 3, 0,
+        0, 1, 3, // first triangle
+        1, 2, 3, // second triangle
     }
 
+    vao, vbo, ebo: u32
+
+    gl.GenVertexArrays(1, &vao); defer gl.DeleteVertexArrays(1, &vao)
+    gl.GenBuffers(1, &vbo); defer gl.DeleteBuffers(1, &vbo)
+    gl.GenBuffers(1, &ebo); defer gl.DeleteBuffers(1, &ebo)
+
+    gl.BindVertexArray(vao)
+
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*size_of(vertices[0]), raw_data(indices), gl.STATIC_DRAW)
+    gl.BufferData(gl.ARRAY_BUFFER, len(vertices)*size_of(vertices[0]), raw_data(vertices), gl.STATIC_DRAW)
+    
+    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+    gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*size_of(indices[0]), raw_data(indices), gl.STATIC_DRAW)
+
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, false, size_of(Vertex), offset_of(Vertex, pos))
+    gl.EnableVertexAttribArray(0)
+
+    start_tick := time.tick_now()
+    movement_x: f32 = 0.1 
+    movement_y: f32 = 0.1 
+    game_loop: for {
+        duration := time.tick_since(start_tick)
+        t := f32(time.duration_seconds(duration))
+
+        event: SDL.Event
+        for SDL.PollEvent(&event) {
+            #partial switch event.type {
+            case .KEYDOWN:
+                #partial switch event.key.keysym.sym {
+                case .ESCAPE: 
+                    break game_loop
+                case .LEFT:
+                    movement_x -= 0.01
+                case .RIGHT:
+                    movement_x += 0.01
+                case .DOWN:
+                    movement_y -= 0.01
+                case .UP:
+                    movement_y += 0.01
+                }
+            case .QUIT:
+                break game_loop
+            }
+        }
+
+        gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
+        gl.ClearColor(0.5, 0.7, 1.0, 1.0)
+        gl.Clear(gl.COLOR_BUFFER_BIT)
+
+        model := glm.mat4{
+			0.5,   0,   0, 0,
+			  0, 0.5,   0, 0,
+			  0,   0, 0.5, 0,
+			  0,   0,   0, 1,
+		}
+        model[3][0] += movement_x
+        model[3][1] = movement_y
+        movement_x += 0.001
+        // model matrix with default scale of 0.5
+
+        model = model * glm.mat4Rotate({0, 1, 1}, movement_x)
+        view := glm.mat4LookAt({0, -1, +1}, {0, 0, 0}, {0, 0, 1})
+		proj := glm.mat4Perspective(45.0, 1.3, 0.1, 100.0)
+        //view := glm.mat4LookAt({0, 0, 0}, {0, 0, 0}, {0, 1, 0})
+        //proj := glm.mat4Ortho3d(0, WINDOW_WIDTH, 0.0, WINDOW_HEIGHT, -0.1, 1000.0)
+
+        u_transform := proj * view * model
+
+        gl.UniformMatrix4fv(uniforms["u_transform"].location, 1, false, &u_transform[0, 0])
+
+        gl.BindVertexArray(vao)
+
+        gl.DrawElements(gl.TRIANGLES, i32(6), gl.UNSIGNED_SHORT, nil)
+
+        SDL.GL_SwapWindow(window)
+        
+    }
 }
 
 sprite_vertex_source := `#version 330 core
 
 layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec4 a_color;
-
-out vec4 v_color;
 
 uniform mat4 u_transform;
 
 void main() {
     gl_Position = u_transform * vec4(a_position, 1.0);
-    v_color = a_color;
 }
 `
 
 sprite_fragment_source := `#version 330 core
 
-in vec4 v_color;
-out vec4 o_color;
+out vec4 FragColor;
 
 void main() {
-    o_color = v_color;
+    FragColor = vec4(0.9, 0.2, 0.3, 1.0);
 }
 `
