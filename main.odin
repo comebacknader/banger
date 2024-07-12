@@ -5,10 +5,11 @@ import win32 "core:sys/windows"
 
 /*
 
-I want to render with Direct3D12 rather than OpenGL. 
+Rather than learn DX12, I should just use OpenGl, and then abstract
+away the renderer, and then I can install DX12 as a backend, later down 
+the line.  
 
 TODO(Nader): Need to set up win32 platform layer. Opening a window. 
-TODO(Nader): Hook up Direct3D12 and render color on the screen.
 TODO(Nader): Replicate what I have in blowback repository.
 
 */
