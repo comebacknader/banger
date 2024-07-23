@@ -9,12 +9,19 @@ import gl "vendor:OpenGL"
 
 /*
 
+If I can ship a game that I make from scratch that would be huge. It can be any game. 
+
+I wouldn't mind building out my own game. I would even like to do the pixel art for the game.  
+Maybe I should only draw 1 hour a day. That's good enough. I'm definitely not trying to do 
+manga, but maybe I can do enough for game dev. Just draw 1 hour a day.  
+
 TODO(Nader): Replicate what I have in blowback repository.
     - Draw square
     - Translate square with OpenGL 
     - Separate a game_update_and_render() function
     - Abstract Input and pass to game_update_and_render
     - Pass memory into game_update_and_render
+    - Enforce a video frame rate
 
 */
 
@@ -40,6 +47,9 @@ void main() {
 	FragColor = vec4(0.9, 0.8, 0.0, 1.0);
 }
 `
+game_update_and_render :: proc(memory: ^GameMemory) {
+
+}
 
 main :: proc() {
     fmt.println("Banger Platformer")
@@ -103,6 +113,12 @@ main :: proc() {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*size_of(indices[0]), raw_data(indices), gl.STATIC_DRAW)
 
+    game_memory: ^GameMemory = &GameMemory{}
+
+    monitor_refresh_rate_hz: u8 = 60
+    game_update_hz: u8 = monitor_refresh_rate_hz
+    target_seconds_elapsed_per_frame: f32 = 1.0 / f32(game_update_hz)
+
     game_loop: for {
         start_tick := time.tick_now()
 
@@ -119,18 +135,17 @@ main :: proc() {
             }
         }
 
-
         gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
         gl.ClearColor(0.8, 0.2, 0.5, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT)
+
+        game_update_and_render(game_memory)
 
         SDL.GL_SwapWindow(window)
         duration := time.tick_since(start_tick)
         seconds_per_frame := f32(time.duration_seconds(duration))
         ms_per_frame := 1000.0 * seconds_per_frame 
         fps := 1 / seconds_per_frame
-        fmt.printf("ms_per_frame: %vms \n", ms_per_frame)
-        fmt.printf("seconds_per_frame: %f \n", seconds_per_frame)
-        fmt.printf("fps: %ff/s \n", fps)
+        fmt.printf("ms/f: %f | fps: %f \n", ms_per_frame, fps)
     }
 }
