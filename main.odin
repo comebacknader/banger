@@ -3,17 +3,22 @@ package main
 import "core:fmt"
 import glm "core:math/linalg/glsl"
 import "core:time"
+import "core:mem"
 
 import SDL "vendor:sdl2"
 import gl "vendor:OpenGL"
 
+v3 :: glm.vec3
+v2 :: glm.vec2
+
 /*
 
-If I can ship a game that I make from scratch that would be huge. It can be any game. 
+If I can ship a game that I make from scratch that would be huge. 
+It can be any game. 
 
-I wouldn't mind building out my own game. I would even like to do the pixel art for the game.  
-Maybe I should only draw 1 hour a day. That's good enough. I'm definitely not trying to do 
-manga, but maybe I can do enough for game dev. Just draw 1 hour a day.  
+I just like game programming. Another cool thing about it is that I can make
+money from scratch with just time programming. I can practice drawing when
+I'm not programming. I'll have plenty of time to practice drawing when not programming.
 
 TODO(Nader): Replicate what I have in blowback repository.
     - Draw square
@@ -47,8 +52,10 @@ void main() {
 	FragColor = vec4(0.9, 0.8, 0.0, 1.0);
 }
 `
-game_update_and_render :: proc(memory: ^GameMemory) {
-
+game_update_and_render :: proc(game_state: ^GameState, game_input: ^GameInput) {
+    if game_input.controllers[0].buttons.up.ended_down {
+        fmt.println("UP button pressed")
+    }
 }
 
 main :: proc() {
@@ -90,7 +97,7 @@ main :: proc() {
     gl.GenBuffers(1, &ebo); defer gl.DeleteBuffers(1, &ebo)
 
     Vertex :: struct {
-        pos: glm.vec3,
+        pos: v3,
     }
 
     vertices := []Vertex{
@@ -113,7 +120,8 @@ main :: proc() {
     gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
     gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*size_of(indices[0]), raw_data(indices), gl.STATIC_DRAW)
 
-    game_memory: ^GameMemory = &GameMemory{}
+    game_state: GameState 
+    game_input: GameInput
 
     monitor_refresh_rate_hz: u8 = 60
     game_update_hz: u8 = monitor_refresh_rate_hz
@@ -127,6 +135,8 @@ main :: proc() {
             #partial switch event.type {
                 case .KEYDOWN:
                     #partial switch event.key.keysym.sym {
+                        case .UP:
+                            game_input.controllers[0].buttons.up.ended_down = true
                         case .ESCAPE:
                             break game_loop
                     }
@@ -139,7 +149,7 @@ main :: proc() {
         gl.ClearColor(0.8, 0.2, 0.5, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT)
 
-        game_update_and_render(game_memory)
+        game_update_and_render(&game_state, &game_input)
 
         SDL.GL_SwapWindow(window)
         duration := time.tick_since(start_tick)
