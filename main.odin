@@ -13,13 +13,6 @@ v2 :: glm.vec2
 
 /*
 
-If I can ship a game that I make from scratch that would be huge. 
-It can be any game. 
-
-I just like game programming. Another cool thing about it is that I can make
-money from scratch with just time programming. I can practice drawing when
-I'm not programming. I'll have plenty of time to practice drawing when not programming.
-
 TODO(Nader): Replicate what I have in blowback repository.
     - Draw square
     - Translate square with OpenGL 
@@ -52,9 +45,11 @@ void main() {
 	FragColor = vec4(0.9, 0.8, 0.0, 1.0);
 }
 `
-game_update_and_render :: proc(game_state: ^GameState, game_input: ^GameInput) {
-    if game_input.controllers[0].buttons.up.ended_down {
-        fmt.println("UP button pressed")
+game_update_and_render :: proc(game_memory: ^GameMemory, game_state: ^GameState, game_input: ^GameInput) {
+    if !game_memory.is_initialized {
+        if game_input.controllers[0].buttons.up.ended_down {
+            fmt.println("UP button pressed")
+        }
     }
 }
 
@@ -122,7 +117,7 @@ main :: proc() {
 
     game_state: GameState 
     game_input: GameInput
-
+    game_memory: GameMemory
     monitor_refresh_rate_hz: u8 = 60
     game_update_hz: u8 = monitor_refresh_rate_hz
     target_seconds_elapsed_per_frame: f32 = 1.0 / f32(game_update_hz)
@@ -140,6 +135,11 @@ main :: proc() {
                         case .ESCAPE:
                             break game_loop
                     }
+                case .KEYUP:
+                    #partial switch event.key.keysym.sym {
+                        case .UP:
+                            game_input.controllers[0].buttons.up.ended_down = false
+                    }
                 case .QUIT:
                     break game_loop
             }
@@ -149,7 +149,7 @@ main :: proc() {
         gl.ClearColor(0.8, 0.2, 0.5, 1.0)
         gl.Clear(gl.COLOR_BUFFER_BIT)
 
-        game_update_and_render(&game_state, &game_input)
+        game_update_and_render(&game_memory, &game_state, &game_input)
 
         SDL.GL_SwapWindow(window)
         duration := time.tick_since(start_tick)
